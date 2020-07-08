@@ -2,7 +2,10 @@
 
 export("%>%")
 export(create_smonitor_site_code)
+export(get_isd_data)
 export(get_isd_sites)
+export(isd_build_urls)
+export(isd_download_data)
 export(isd_read)
 export(isd_site_to_smonitor_site)
 importFrom(dplyr,arrange)

@@ -197,6 +197,16 @@ read_isd_table <- function(file, verbose) {
   
   if (stringr::str_detect(file, ".csv$")) {
     
+    if (stringr::str_detect(file, "^http")) {
+      
+      # Remote, reassign file object
+      file <- isd_get_remote_text(file)
+      
+      # Return if file does not exist
+      if (length(file) == 0) return(tibble())
+      
+    } 
+    
     # Parse content, warning suppression is for non-declared names
     df <- suppressWarnings(
       readr::read_csv(
@@ -243,5 +253,21 @@ isd_variable_types <- function() {
     GA2 = readr::col_character(),
     GA3 = readr::col_character()
   )
+  
+}
+
+
+isd_get_remote_text <- function(file) {
+  
+  # Use httr to get page
+  response <- httr::GET(file)
+  
+  # If file does not exist
+  if (httr::status_code(response) == 404L) return(as.character())
+  
+  # Extract content as text
+  text <- httr::content(response, type = "text", encoding = "UTF-8")
+  
+  return(text)
   
 }
