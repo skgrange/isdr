@@ -4,12 +4,12 @@
 \alias{isd_download_data}
 \title{Function to download ISD data files.}
 \usage{
-isd_download_data(file, directory_output, parallel = FALSE, verbose = FALSE)
+isd_download_data(file_remote, file_local, parallel = FALSE, verbose = FALSE)
 }
 \arguments{
-\item{file}{Vector of remote file names.}
+\item{file_remote}{Vector of remote file names.}
 
-\item{directory_output}{Directory to export files to.}
+\item{file_local}{Vector of file names to export data to.}
 
 \item{parallel}{Should files be read in parallel? If \code{TRUE}, a 
 \strong{futures} back-end must be registered.}

@@ -1,7 +1,7 @@
 Package: isdr
 Type: Package
 Title: Import Integrated Surface Database (ISD) Data
-Version: 0.0.3
+Version: 0.0.4
 Date: 2020-07-08
 Authors@R: person("Stuart", "Grange", email = "s.k.grange@gmail.com", 
     role = c("cre", "aut"), comment = c(ORCID = "0000-0003-4093-3596"))

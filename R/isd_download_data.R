@@ -1,8 +1,8 @@
 #' Function to download ISD data files.
 #' 
-#' @param file Vector of remote file names. 
+#' @param file_remote Vector of remote file names. 
 #' 
-#' @param directory_output Directory to export files to.
+#' @param file_local Vector of file names to export data to. 
 #' 
 #' @param parallel Should files be read in parallel? If \code{TRUE}, a 
 #' \strong{futures} back-end must be registered. 
@@ -28,17 +28,18 @@
 #' }
 #' 
 #' @export
-isd_download_data <- function(file, directory_output, parallel = FALSE, 
+isd_download_data <- function(file_remote, file_local, parallel = FALSE, 
                               verbose = FALSE) {
   
   # Download all files
   if (parallel) {
     
-    file %>% 
-      furrr::future_walk(
+      furrr::future_walk2(
+        file_remote, 
+        file_local,
         ~isd_download_data_worker(
-          ., 
-          directory_output = directory_output,
+          file_remote = .x, 
+          file_local = .y,
           verbose = FALSE
         ),
         .progress = verbose
@@ -46,14 +47,15 @@ isd_download_data <- function(file, directory_output, parallel = FALSE,
     
   } else {
     
-    file %>% 
-      purrr::walk(
-        ~isd_download_data_worker(
-          ., 
-          directory_output = directory_output,
-          verbose = verbose
-        )
+    purrr::walk2(
+      file_remote, 
+      file_local,
+      ~isd_download_data_worker(
+        file_remote = .x, 
+        file_local = .y,
+        verbose = verbose
       )
+    )
     
   }
   
@@ -62,26 +64,20 @@ isd_download_data <- function(file, directory_output, parallel = FALSE,
 }
 
 
-isd_download_data_worker <- function(file, directory_output, verbose) {
+isd_download_data_worker <- function(file_remote, file_local, verbose) {
   
   # Read data
-  df <- isd_read_worker(file, priority = FALSE, longer = FALSE, verbose = verbose)
+  df <- isd_read_worker(file_remote, priority = FALSE, longer = FALSE, verbose = verbose)
   
   # Only export if something is there to be exported
   if (nrow(df) != 0) {
     
-    # Build file name
-    file_split <- stringr::str_split_fixed(file, "/|\\.", 12)
-    
-    file_output <- stringr::str_c(
-      "isd_data_", file_split[, 11], "_", file_split[, 10], ".rds"
-    )
-    
-    # Add directory
-    file_output <- fs::path(directory_output, file_output)
-    
-    # Export as rds object
-    saveRDS(df, file_output)
+    # Export as an rds object
+    if (fs::path_ext(file_local) == "rds") {
+      saveRDS(df, file_local)
+    } else {
+      stop("Output format not supported.", call. = FALSE)
+    }
     
   } else{
     if (verbose) message(threadr::date_message(), "No observations available...")

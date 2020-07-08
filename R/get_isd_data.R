@@ -83,7 +83,10 @@ get_isd_data <- function(site, year, priority = FALSE, longer = FALSE,
 isd_build_urls <- function(site, year) {
   
   # Build table of site and year combinations
-  df <- tidyr::crossing(site, year)
+  df <- tidyr::crossing(
+    site = unique(site),
+    year = unique(year)
+  )
   
   # Build remote urls
   x <- stringr::str_c(
