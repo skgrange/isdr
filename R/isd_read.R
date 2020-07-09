@@ -81,7 +81,10 @@ isd_read_worker <- function(file, priority, longer, verbose) {
              ws,
              air_temp, 
              rh,
-             atmospheric_pressure)
+             atmospheric_pressure) %>% 
+      openair::timeAverage(avg.time = "hour", type = c("site", "site_name")) %>% 
+      ungroup() %>% 
+      mutate(across(c(site, site_name), as.character))
   }
   
   # Reshape data
@@ -152,7 +155,7 @@ separate_and_clean_isd_variables <- function(df) {
     ) %>% 
     mutate(
       atmospheric_pressure = if_else(
-        atmospheric_pressure == 9999, NA_integer_, atmospheric_pressure
+        atmospheric_pressure %in% c(9999, 99999), NA_integer_, atmospheric_pressure
       ),
       atmospheric_pressure = atmospheric_pressure / 10
     ) %>% 
