@@ -5,9 +5,12 @@
 \title{Function to get metadata for the NOAA's Integrated Surface Database (ISD) 
 sites.}
 \usage{
-get_isd_sites(clean = TRUE)
+get_isd_sites(file = NA, clean = TRUE)
 }
 \arguments{
+\item{file}{File name of ISD sites data. If empty, the remote version is 
+used.}
+
 \item{clean}{Should the returned tibble be cleaned in the \strong{smonitor} 
 style?}
 }

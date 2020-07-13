@@ -3,6 +3,9 @@
 #' 
 #' @author Stuart K. Grange
 #' 
+#' @param file File name of ISD sites data. If empty, the remote version is 
+#' used.
+#' 
 #' @param clean Should the returned tibble be cleaned in the \strong{smonitor} 
 #' style? 
 #' 
@@ -16,10 +19,12 @@
 #' get_isd_sites()
 #' 
 #' @export
-get_isd_sites <- function(clean = TRUE) {
+get_isd_sites <- function(file = NA, clean = TRUE) {
   
   # Load data
-  url <- "ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv"
+  if (is.na(file)) {
+    file <- "ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv"
+  }
   
   # Keep data types robust
   col_types <- readr::cols(
@@ -37,7 +42,7 @@ get_isd_sites <- function(clean = TRUE) {
   )
   
   # Read
-  df <- readr::read_csv(url, progress = FALSE, col_types = col_types)
+  df <- readr::read_csv(file, progress = FALSE, col_types = col_types)
   
   if (clean) {
     
