@@ -15,8 +15,12 @@
 #' 
 #' @examples 
 #' 
+#' \dontrun{
+#' 
 #' # Get isd sites data
 #' get_isd_sites()
+#' 
+#' }
 #' 
 #' @export
 get_isd_sites <- function(file = NA, clean = TRUE) {

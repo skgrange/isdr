@@ -22,7 +22,7 @@
 #' 
 #' @examples 
 #' 
-#' # Load an example data file
+#' # Load some data
 #' get_isd_data(site = "11290099999", year = 2020, priority = TRUE)
 #' 
 #' @export

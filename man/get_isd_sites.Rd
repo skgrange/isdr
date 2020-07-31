@@ -23,8 +23,12 @@ sites.
 }
 \examples{
 
+\dontrun{
+
 # Get isd sites data
 get_isd_sites()
+
+}
 
 }
 \seealso{
