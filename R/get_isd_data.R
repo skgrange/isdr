@@ -35,16 +35,24 @@ get_isd_data <- function(site, year, priority = FALSE, longer = FALSE,
   # Read all the files
   if (parallel) {
     
-    df <- file_remote %>%
-      furrr::future_map_dfr(
-        ~isd_read_worker(
-          .,
-          priority = priority,
-          longer = longer,
-          verbose = FALSE
-        ),
-        .progress = verbose
-      )
+    progressr::with_progress({
+      
+      # Initialise progress bar
+      progress_bar <- progressr::progressor(along = file_remote)
+      
+      # Do
+      df <- file_remote %>%
+        furrr::future_map_dfr(
+          ~isd_read_worker(
+            .,
+            priority = priority,
+            longer = longer,
+            progress_bar = progress_bar,
+            verbose = FALSE
+          )
+        )
+      
+    })
     
   } else {
     
@@ -54,6 +62,7 @@ get_isd_data <- function(site, year, priority = FALSE, longer = FALSE,
           .,
           priority = priority,
           longer = longer,
+          progress_bar = NULL,
           verbose = verbose
         )
       )
