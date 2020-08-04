@@ -37,16 +37,24 @@ isd_read <- function(file, priority = FALSE, longer = FALSE, parallel = FALSE,
   
   if (parallel) {
     
-    df <- file %>%
-      furrr::future_map_dfr(
-        ~isd_read_worker(
-          .,
-          priority = priority,
-          longer = longer,
-          verbose = FALSE
-        ),
-        .progress = verbose
-      )
+    progressr::with_progress({
+      
+      # Initialise progress bar
+      progress_bar <- progressr::progressor(along = file)
+      
+      # Do
+      df <- file %>%
+        furrr::future_map_dfr(
+          ~isd_read_worker(
+            .,
+            priority = priority,
+            longer = longer,
+            progress_bar = progress_bar,
+            verbose = FALSE
+          )
+        )
+      
+    })
     
   } else {
     
@@ -56,6 +64,7 @@ isd_read <- function(file, priority = FALSE, longer = FALSE, parallel = FALSE,
           .,
           priority = priority,
           longer = longer,
+          progress_bar = NULL,
           verbose = verbose
         )
       )
@@ -67,7 +76,7 @@ isd_read <- function(file, priority = FALSE, longer = FALSE, parallel = FALSE,
 }
 
 
-isd_read_worker <- function(file, priority, longer, verbose) {
+isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
   
   # Parse tabular data
   df <- read_isd_table(file, verbose = verbose)
@@ -95,6 +104,9 @@ isd_read_worker <- function(file, priority, longer, verbose) {
       arrange(variable,
               date)
   }
+  
+  # Update progress bar
+  if (!is.null(progress_bar)) progress_bar()
   
   return(df)
   
