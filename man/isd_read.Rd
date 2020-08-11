@@ -38,7 +38,7 @@ isd_read(
   "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv"
 )
 
-# Load an example data file and clean up a bit
+# Load an example data file and clean it a bit
 isd_read(
   "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv",
   priority = TRUE

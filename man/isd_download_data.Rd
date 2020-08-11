@@ -24,15 +24,11 @@ Function to download ISD data files.
 }
 \examples{
 
-\dontrun{
-
-# Download some files
+# Download a file and save locally as an .rds file
 isd_download_data(
-  file = "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv", 
-  directory_output = "~/Desktop"
+  file_remote = "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv", 
+  file_local = stringr::str_c(tempdir(), ".rds")
 )
-
-}
 
 }
 \seealso{

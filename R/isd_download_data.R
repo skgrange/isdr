@@ -17,15 +17,11 @@
 #' 
 #' @examples 
 #' 
-#' \dontrun{
-#' 
-#' # Download some files
+#' # Download a file and save locally as an .rds file
 #' isd_download_data(
-#'   file = "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv", 
-#'   directory_output = "~/Desktop"
+#'   file_remote = "https://www.ncei.noaa.gov/data/global-hourly/access/2020/11290099999.csv", 
+#'   file_local = stringr::str_c(tempdir(), ".rds")
 #' )
-#' 
-#' }
 #' 
 #' @export
 isd_download_data <- function(file_remote, file_local, parallel = FALSE, 
@@ -34,17 +30,24 @@ isd_download_data <- function(file_remote, file_local, parallel = FALSE,
   # Download all files
   if (parallel) {
     
+    progressr::with_progress({
+      
+      # Initialise progress bar
+      progress_bar <- progressr::progressor(along = file_remote)
+    
       furrr::future_walk2(
         file_remote, 
         file_local,
         ~isd_download_data_worker(
           file_remote = .x, 
           file_local = .y,
+          progress_bar = progress_bar,
           verbose = FALSE
-        ),
-        .progress = verbose
+        )
       )
     
+    })
+      
   } else {
     
     purrr::walk2(
@@ -53,6 +56,7 @@ isd_download_data <- function(file_remote, file_local, parallel = FALSE,
       ~isd_download_data_worker(
         file_remote = .x, 
         file_local = .y,
+        progress_bar = NULL,
         verbose = verbose
       )
     )
@@ -64,10 +68,17 @@ isd_download_data <- function(file_remote, file_local, parallel = FALSE,
 }
 
 
-isd_download_data_worker <- function(file_remote, file_local, verbose) {
+isd_download_data_worker <- function(file_remote, file_local, progress_bar, 
+                                     verbose) {
   
   # Read data
-  df <- isd_read_worker(file_remote, priority = FALSE, longer = FALSE, verbose = verbose)
+  df <- isd_read_worker(
+    file_remote, 
+    priority = FALSE, 
+    longer = FALSE, 
+    progress_bar = NULL,
+    verbose = verbose
+  )
   
   # Only export if something is there to be exported
   if (nrow(df) != 0) {
@@ -82,6 +93,9 @@ isd_download_data_worker <- function(file_remote, file_local, verbose) {
   } else{
     if (verbose) message(threadr::date_message(), "No observations available...")
   }
+  
+  # Update progress bar
+  if (!is.null(progress_bar)) progress_bar()
   
   return(invisible(NULL))
   
