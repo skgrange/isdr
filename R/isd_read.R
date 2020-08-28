@@ -82,19 +82,36 @@ isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
   df <- read_isd_table(file, verbose = verbose)
   
   if (priority) {
+    
+    # Clean variables
+    df <- separate_and_clean_isd_variables(df)
+    
+    # # Test
+    # has_precipitation <- "precipitation" %in% names(df)
+    # 
+    # # Handle precipitation, this variable cannot be aggregated
+    # if (has_precipitation) {
+    #   df_precipitation <- select(df, date, precipitation)
+    # } 
+    
+    # Select variables and aggregate
     df <- df %>% 
-      separate_and_clean_isd_variables() %>% 
       select(site = station,
              site_name,
              date,
              wd,
              ws,
-             air_temp, 
+             air_temp,
              rh,
-             atmospheric_pressure) %>% 
-      openair::timeAverage(avg.time = "hour", type = c("site", "site_name")) %>% 
-      ungroup() %>% 
+             atmospheric_pressure) %>%
+      openair::timeAverage(avg.time = "hour", type = c("site", "site_name")) %>%
+      ungroup() %>%
       mutate(across(c(site, site_name), as.character))
+    
+    # if (has_precipitation) {
+    #   df <- left_join(df, df_precipitation, by = "date")
+    # }
+    
   }
   
   # Reshape data
@@ -114,6 +131,11 @@ isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
 
 
 separate_and_clean_isd_variables <- function(df) {
+  
+  # https://www.ncei.noaa.gov/data/global-hourly/doc/isd-format-document.pdf
+  
+  # # Pad to hourly time series, needed for precip work
+  # df <- threadr::time_pad(df, "hour", by = c("station", "name"))
   
   # Clean wind variables
   df <- df %>% 
@@ -175,16 +197,66 @@ separate_and_clean_isd_variables <- function(df) {
     select(-flag_atmospheric_pressure)
   
   # # Clean precipitation variables
-  # df %>% 
-  #   tidyr::separate(
-  #     aa1, 
-  #     into = c(
-  #       "precipitation_code", "precipitation", "precipitation_code_1", 
-  #       "precipitation_code_2"
-  #     ), 
-  #     sep = ",", 
-  #     convert = TRUE
-  #   )
+  # if ("aa1" %in% names(df)) {
+  #   
+  #   # Takes a lot of work, here we have rolling sums with some observations
+  #   # needing to be subtracted from previous ones
+  #   df_precp <- df %>%
+  #     tidyr::separate(
+  #       aa1,
+  #       into = c(
+  #         "precipitation_code", "precipitation", "precipitation_code_1",
+  #         "precipitation_code_2"
+  #       ),
+  #       sep = ",",
+  #       convert = TRUE
+  #     ) %>% 
+  #     mutate(
+  #       precipitation = if_else(
+  #         precipitation == 9999 | precipitation_code == 99, NA_integer_, precipitation
+  #       ),
+  #       precipitation_code = if_else(precipitation_code == 99, NA_integer_, precipitation_code)
+  #     ) %>% 
+  #     select(date,
+  #            precipitation_code,
+  #            precipitation) %>% 
+  #     mutate(
+  #       precipitation_6 = if_else(precipitation_code == 6, precipitation, NA_integer_),
+  #       precipitation_12 = if_else(precipitation_code == 12, precipitation, NA_integer_),
+  #       precipitation_6_lag = dplyr::lag(precipitation_6, 6),
+  #       precipitation_corrected = precipitation_6,
+  #       precipitation_corrected = if_else(
+  #         is.na(precipitation_corrected), 
+  #         precipitation_12 - precipitation_6_lag, 
+  #         precipitation_corrected
+  #       )
+  #     )
+  #   
+  #   # Find where there are precipitation values
+  #   index <- which(!is.na(df_precp$precipitation_corrected))
+  #   
+  #   # Drop values which cannot be used
+  #   index <- index[index < (nrow(df_precp) - 6)]
+  #   index <- index[index > 6]
+  #   
+  #   # A for loop in R! 
+  #   # Pre allocate
+  #   df_precp$precipitation_corrected_pushed <- NA_real_
+  #   
+  #   # Modify in place
+  #   for (i in seq_along(index)) {
+  #     df_precp$precipitation_corrected_pushed[(index[i] - 5):index[i]] <-
+  #       df_precp$precipitation_corrected[index[i]] / 6
+  #   }
+  #   
+  #   # Join to set
+  #   df <- df %>% 
+  #     left_join(
+  #       select(df_precp, date, precipitation = precipitation_corrected_pushed),
+  #       by = "date"
+  #     )
+  #   
+  # }
   
   # ceiling height? 
   
@@ -193,7 +265,8 @@ separate_and_clean_isd_variables <- function(df) {
   # Calculate relative humidity
   df <- mutate(
     df,
-    rh = 100 * ((112 - 0.1 * air_temp + dew_point)/(112 + 0.9 * air_temp)) ^ 8
+    rh = 100 * ((112 - 0.1 * air_temp + dew_point)/(112 + 0.9 * air_temp)) ^ 8,
+    rh = round(rh, 1)
   )
   
   # Clean site name
