@@ -86,14 +86,6 @@ isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
     # Clean variables
     df <- separate_and_clean_isd_variables(df)
     
-    # # Test
-    # has_precipitation <- "precipitation" %in% names(df)
-    # 
-    # # Handle precipitation, this variable cannot be aggregated
-    # if (has_precipitation) {
-    #   df_precipitation <- select(df, date, precipitation)
-    # } 
-    
     # Select variables and aggregate
     df <- df %>% 
       select(site = station,
@@ -107,10 +99,6 @@ isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
       openair::timeAverage(avg.time = "hour", type = c("site", "site_name")) %>%
       ungroup() %>%
       mutate(across(c(site, site_name), as.character))
-    
-    # if (has_precipitation) {
-    #   df <- left_join(df, df_precipitation, by = "date")
-    # }
     
   }
   
@@ -133,9 +121,6 @@ isd_read_worker <- function(file, priority, longer, progress_bar, verbose) {
 separate_and_clean_isd_variables <- function(df) {
   
   # https://www.ncei.noaa.gov/data/global-hourly/doc/isd-format-document.pdf
-  
-  # # Pad to hourly time series, needed for precip work
-  # df <- threadr::time_pad(df, "hour", by = c("station", "name"))
   
   # Clean wind variables
   df <- df %>% 
@@ -196,67 +181,7 @@ separate_and_clean_isd_variables <- function(df) {
     ) %>% 
     select(-flag_atmospheric_pressure)
   
-  # # Clean precipitation variables
-  # if ("aa1" %in% names(df)) {
-  #   
-  #   # Takes a lot of work, here we have rolling sums with some observations
-  #   # needing to be subtracted from previous ones
-  #   df_precp <- df %>%
-  #     tidyr::separate(
-  #       aa1,
-  #       into = c(
-  #         "precipitation_code", "precipitation", "precipitation_code_1",
-  #         "precipitation_code_2"
-  #       ),
-  #       sep = ",",
-  #       convert = TRUE
-  #     ) %>% 
-  #     mutate(
-  #       precipitation = if_else(
-  #         precipitation == 9999 | precipitation_code == 99, NA_integer_, precipitation
-  #       ),
-  #       precipitation_code = if_else(precipitation_code == 99, NA_integer_, precipitation_code)
-  #     ) %>% 
-  #     select(date,
-  #            precipitation_code,
-  #            precipitation) %>% 
-  #     mutate(
-  #       precipitation_6 = if_else(precipitation_code == 6, precipitation, NA_integer_),
-  #       precipitation_12 = if_else(precipitation_code == 12, precipitation, NA_integer_),
-  #       precipitation_6_lag = dplyr::lag(precipitation_6, 6),
-  #       precipitation_corrected = precipitation_6,
-  #       precipitation_corrected = if_else(
-  #         is.na(precipitation_corrected), 
-  #         precipitation_12 - precipitation_6_lag, 
-  #         precipitation_corrected
-  #       )
-  #     )
-  #   
-  #   # Find where there are precipitation values
-  #   index <- which(!is.na(df_precp$precipitation_corrected))
-  #   
-  #   # Drop values which cannot be used
-  #   index <- index[index < (nrow(df_precp) - 6)]
-  #   index <- index[index > 6]
-  #   
-  #   # A for loop in R! 
-  #   # Pre allocate
-  #   df_precp$precipitation_corrected_pushed <- NA_real_
-  #   
-  #   # Modify in place
-  #   for (i in seq_along(index)) {
-  #     df_precp$precipitation_corrected_pushed[(index[i] - 5):index[i]] <-
-  #       df_precp$precipitation_corrected[index[i]] / 6
-  #   }
-  #   
-  #   # Join to set
-  #   df <- df %>% 
-  #     left_join(
-  #       select(df_precp, date, precipitation = precipitation_corrected_pushed),
-  #       by = "date"
-  #     )
-  #   
-  # }
+  # Clean precipitation variables
   
   # ceiling height? 
   
@@ -349,10 +274,17 @@ isd_variable_types <- function() {
 isd_get_remote_text <- function(file) {
   
   # Use httr to get page
-  response <- httr::GET(file)
+  response <- tryCatch({
+    httr::GET(file, httr::timeout(60))
+  }, error = function(e) {
+    warning("The server did not respond to `", file, "`...", call. = FALSE)
+    NULL
+  })
   
-  # If file does not exist
-  if (httr::status_code(response) == 404L) return(as.character())
+  # If file does not exist or there is an server-side error
+  if (is.null(response) || httr::status_code(response) %in% c(404L, 502L)) {
+    return(as.character())
+  }
   
   # Extract content as text
   text <- httr::content(response, type = "text", encoding = "UTF-8")
